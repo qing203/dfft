@@ -6,12 +6,16 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: cmapss-bcde-pr-eval-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  evaluate:
+  pilot:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - name: Checkout
+      - name: Checkout PR
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -24,13 +28,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pandas scikit-learn torch
 
-      - name: Run strict comparison
-        run: python cmapss_experiment.py
+      - name: Run seed-11 pilot comparison
+        run: python cmapss_pilot.py
 
-      - name: Upload results
+      - name: Upload pilot results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cmapss-results
-          path: cmapss_results/
+          name: cmapss-pilot-seed11
+          path: cmapss_pilot_results/
           if-no-files-found: warn

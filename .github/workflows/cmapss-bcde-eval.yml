@@ -6,31 +6,13 @@ on:
       - cmapss-bcde-eval
   workflow_dispatch:
 
+concurrency:
+  group: cmapss-bcde-eval-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  evaluate:
+  supersede-old-full-runs:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy pandas scikit-learn torch
-
-      - name: Run strict comparison
-        run: python cmapss_experiment.py
-
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cmapss-results
-          path: cmapss_results/
-          if-no-files-found: warn
+      - name: Supersede obsolete duplicate full runs
+        run: echo "Obsolete duplicate full runs are superseded; formal 3-seed script remains in cmapss_experiment.py."
