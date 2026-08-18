@@ -1,36 +1,33 @@
-name: cmapss-bcde-fast-temp
+name: cmapss-futureops-temp
 
 on:
   pull_request:
     branches:
       - main
+    types: [opened, reopened, synchronize]
 
 jobs:
   evaluate:
+    if: github.head_ref == 'cmapss-futureops-ablation'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: |
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install numpy pandas scikit-learn torch
-      - name: Apply uniform speed settings
-        run: |
-          sed -i 's/DataLoader(train,256/DataLoader(train,1024/' cmapss_experiment.py
-          sed -i 's/DataLoader(val,512)/DataLoader(val,2048)/' cmapss_experiment.py
-          sed -i 's/DataLoader(test,512)/DataLoader(test,2048)/' cmapss_experiment.py
-          sed -i 's/model=Model(32)/model=Model(16)/' cmapss_experiment.py
-          sed -i 's/for ep in range(40):/for ep in range(18):/' cmapss_experiment.py
-          sed -i 's/if bad>=6:/if bad>=4:/' cmapss_experiment.py
-      - name: Run strict comparison
-        run: python cmapss_experiment.py
+      - name: Run future operating-sequence ablation
+        run: python cmapss_futureops_ablation.py
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cmapss-results-fast
-          path: cmapss_results/
+          name: cmapss-futureops-results
+          path: cmapss_futureops_results/
           if-no-files-found: warn
