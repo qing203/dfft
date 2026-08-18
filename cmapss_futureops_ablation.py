@@ -1,3 +1,4 @@
+import argparse
 import random
 from pathlib import Path
 
@@ -109,25 +110,36 @@ def train_one(df, tr, va, te, L, K, mode, seed, opsc, device):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fd", choices=["FD002", "FD004"])
+    parser.add_argument("--k", type=int, choices=[3, 5, 10])
+    args = parser.parse_args()
+
     torch.set_num_threads(2)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     rows = []
+    fds = [args.fd] if args.fd else ["FD002", "FD004"]
+    ks = [args.k] if args.k else [3, 5, 10]
 
-    for fd in ["FD002", "FD004"]:
+    for fd in fds:
         raw = read_train(fd)
         tr, va, te = split_units(raw)
         df, _ = build_hi(raw, tr)
         opsc = StandardScaler().fit(df[df.unit.isin(tr)][["op1", "op2", "op3"]])
 
-        for K in [3, 5, 10]:
+        for K in ks:
             for mode in ["true_future", "hold_current", "no_future"]:
-                metrics = train_one(df, tr, va, te, 20, K, mode, 11, opsc, device)
-                row = {"dataset": fd, "K": K, "mode": mode, "seed": 11, **metrics}
-                rows.append(row)
-                print(row, flush=True)
+                for seed in [11, 22, 33]:
+                    metrics = train_one(df, tr, va, te, 20, K, mode, seed, opsc, device)
+                    row = {"dataset": fd, "K": K, "mode": mode, "seed": seed, **metrics}
+                    rows.append(row)
+                    print(row, flush=True)
 
     res = pd.DataFrame(rows)
-    res.to_csv(OUT / "pilot_seed11.csv", index=False)
+    suffix = f"{fds[0]}_K{ks[0]}" if len(fds) == 1 and len(ks) == 1 else "all"
+    res.to_csv(OUT / f"runs_{suffix}.csv", index=False)
+    summary = res.groupby(["dataset", "K", "mode"])[["MAE", "RMSE", "LAST_MAE"]].agg(["mean", "std"])
+    summary.to_csv(OUT / f"summary_{suffix}.csv")
     print("\nFUTURE OPS ABLATION\n", res.to_string(index=False))
 
 
